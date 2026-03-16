@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+    <title>AI Chat</title>
+
+    <style>
+        body {
+            font-family: system-ui;
+            background: #09121a;
+            color: white;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .messages {
+            height: 70vh;
+            overflow: auto;
+            margin-bottom: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .message {
+            padding: 10px;
+            border-radius: 10px;
+            max-width: 80%;
+            word-wrap: break-word;
+        }
+
+        .user {
+            background: #2d99ff40;
+            margin-left: auto;
+        }
+
+        .assistant {
+            background: #ffffff20;
+        }
+
+        textarea {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            background: #ffffff10;
+            color: white;
+            border: 1px solid #ffffff30;
+            resize: none;
+        }
+
+        button {
+
+            margin-top: 10px;
+            padding: 10px;
+            border: none;
+            background: #2870ff;
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-right: 5px;
+
+        }
+
+        button:hover {
+            background: #1f5ede;
+        }
+
+        .loading {
+            opacity: .6;
+            font-style: italic;
+        }
+
+        img {
+
+            max-width: 350px;
+
+            border-radius: 10px;
+
+            margin-top: 5px;
+
+        }
+    </style>
+
+</head>
+
+<body>
+
+    <h2>AI Chat</h2>
+
+    <div class="messages" id="messages">
+    </div>
+
+    <textarea id="input" rows="3" placeholder="Type message or image prompt">
+</textarea>
+
+    <br>
+
+    <button onclick="send()">
+        Send Chat
+    </button>
+
+    <button onclick="generateImage()">
+        Generate Image
+    </button>
+
+    <script>
+
+        const messages =
+            document.getElementById("messages");
+
+        const input =
+            document.getElementById("input");
+
+
+        function add(text, role) {
+
+            const div =
+                document.createElement("div");
+
+            div.className =
+                "message " + role;
+
+            div.textContent = text;
+
+            messages.appendChild(div);
+
+            messages.scrollTop =
+                messages.scrollHeight;
+
+        }
+
+
+        function addImage(url) {
+
+            const div =
+                document.createElement("div");
+
+            div.className =
+                "message assistant";
+
+            const img =
+                document.createElement("img");
+
+            img.src = url;
+
+            div.appendChild(img);
+
+            messages.appendChild(div);
+
+            messages.scrollTop =
+                messages.scrollHeight;
+
+        }
+
+
+        function addLoading() {
+
+            const div =
+                document.createElement("div");
+
+            div.className =
+                "message assistant loading";
+
+            div.id = "loading";
+
+            div.textContent = "Generating...";
+
+            messages.appendChild(div);
+
+        }
+
+
+        function removeLoading() {
+
+            const el =
+                document.getElementById("loading");
+
+            if (el) el.remove();
+
+        }
+
+
+        async function send() {
+
+            const text =
+                input.value.trim();
+
+            if (!text) return;
+
+            add(text, "user");
+
+            input.value = "";
+
+            addLoading();
+
+            const resp =
+                await fetch("/response", {
+
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body: JSON.stringify({
+
+                        message: text
+
+                    })
+
+                });
+
+            const data =
+                await resp.json();
+
+            removeLoading();
+
+            add(
+
+                data.reply ||
+                data.error ||
+                "Error",
+
+                "assistant"
+
+            );
+
+        }
+
+
+        async function generateImage() {
+
+            const text = input.value.trim();
+
+            if (!text) return;
+
+            add(text, "user");
+
+            input.value = "";
+
+            addLoading();
+
+            const resp =
+                await fetch("/image", {
+
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+
+                    body: JSON.stringify({
+
+                        prompt: text
+
+                    })
+
+                });
+
+            const data =
+                await resp.json();
+
+            removeLoading();
+
+            if (data.image) {
+
+                addImage(data.image);
+
+            } else {
+
+                add(data.error || "Image failed", "assistant");
+
+            }
+
+        }
+
+
+        input.addEventListener(
+
+            "keydown",
+
+            function (e) {
+
+                if (e.key === "Enter"
+                    && !e.shiftKey) {
+
+                    e.preventDefault();
+
+                    send();
+
+                }
+
+            }
+
+        );
+
+    </script>
+
+</body>
+
+</html>
